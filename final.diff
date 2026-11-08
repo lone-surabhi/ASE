@@ -1,0 +1,78 @@
+diff --git a/tinyledger/src/tinyledger/__pycache__/__init__.cpython-314.pyc b/workspace/src/tinyledger/__pycache__/__init__.cpython-314.pyc
+index 2f0544f..45ed2f3 100644
+Binary files a/tinyledger/src/tinyledger/__pycache__/__init__.cpython-314.pyc and b/workspace/src/tinyledger/__pycache__/__init__.cpython-314.pyc differ
+diff --git a/workspace/src/tinyledger/__pycache__/__main__.cpython-314.pyc b/workspace/src/tinyledger/__pycache__/__main__.cpython-314.pyc
+new file mode 100644
+index 0000000..c5f94c3
+Binary files /dev/null and b/workspace/src/tinyledger/__pycache__/__main__.cpython-314.pyc differ
+diff --git a/workspace/src/tinyledger/__pycache__/cli.cpython-314.pyc b/workspace/src/tinyledger/__pycache__/cli.cpython-314.pyc
+new file mode 100644
+index 0000000..c0f34d9
+Binary files /dev/null and b/workspace/src/tinyledger/__pycache__/cli.cpython-314.pyc differ
+diff --git a/tinyledger/src/tinyledger/__pycache__/io_csv.cpython-314.pyc b/workspace/src/tinyledger/__pycache__/io_csv.cpython-314.pyc
+index be49124..a5db47d 100644
+Binary files a/tinyledger/src/tinyledger/__pycache__/io_csv.cpython-314.pyc and b/workspace/src/tinyledger/__pycache__/io_csv.cpython-314.pyc differ
+diff --git a/tinyledger/src/tinyledger/__pycache__/ledger.cpython-314.pyc b/workspace/src/tinyledger/__pycache__/ledger.cpython-314.pyc
+index cf491ab..51b625d 100644
+Binary files a/tinyledger/src/tinyledger/__pycache__/ledger.cpython-314.pyc and b/workspace/src/tinyledger/__pycache__/ledger.cpython-314.pyc differ
+diff --git a/tinyledger/src/tinyledger/__pycache__/models.cpython-314.pyc b/workspace/src/tinyledger/__pycache__/models.cpython-314.pyc
+index 5f6988e..1a4d538 100644
+Binary files a/tinyledger/src/tinyledger/__pycache__/models.cpython-314.pyc and b/workspace/src/tinyledger/__pycache__/models.cpython-314.pyc differ
+diff --git a/tinyledger/src/tinyledger/__pycache__/money.cpython-314.pyc b/workspace/src/tinyledger/__pycache__/money.cpython-314.pyc
+index d97a6c4..ceab1fe 100644
+Binary files a/tinyledger/src/tinyledger/__pycache__/money.cpython-314.pyc and b/workspace/src/tinyledger/__pycache__/money.cpython-314.pyc differ
+diff --git a/tinyledger/src/tinyledger/__pycache__/settle.cpython-314.pyc b/workspace/src/tinyledger/__pycache__/settle.cpython-314.pyc
+index 1647138..f1f3f2d 100644
+Binary files a/tinyledger/src/tinyledger/__pycache__/settle.cpython-314.pyc and b/workspace/src/tinyledger/__pycache__/settle.cpython-314.pyc differ
+diff --git a/tinyledger/src/tinyledger/io_csv.py b/workspace/src/tinyledger/io_csv.py
+index a139814..7673563 100644
+--- a/tinyledger/src/tinyledger/io_csv.py
++++ b/workspace/src/tinyledger/io_csv.py
+@@ -8,7 +8,7 @@ Format (semicolon-separated, German number format):
+ from __future__ import annotations
+ 
+ import csv
+-from datetime import date
++from datetime import date, datetime
+ from pathlib import Path
+ 
+ from .models import Expense
+@@ -22,12 +22,7 @@ def parse_date(text: str) -> date:
+     text = text.strip()
+     if "-" in text:
+         return date.fromisoformat(text)
+-    first, second, year = (int(part) for part in text.split("."))
+-    month, day = first, second
+-    if month > 12:
+-        # clearly the other way round
+-        month, day = second, first
+-    return date(year, month, day)
++    return datetime.strptime(text, "%d.%m.%Y").date()
+ 
+ 
+ def load_expenses(path: str | Path) -> list[Expense]:
+diff --git a/tinyledger/src/tinyledger/ledger.py b/workspace/src/tinyledger/ledger.py
+index f3030de..b5c44f6 100644
+--- a/tinyledger/src/tinyledger/ledger.py
++++ b/workspace/src/tinyledger/ledger.py
+@@ -34,7 +34,7 @@ class Ledger:
+ 
+     def balances(self) -> dict[str, int]:
+         """Positive balance: the person gets money back. Negative: the person owes money."""
+-        balances = {expense.payer: 0 for expense in self.expenses}
++        balances = {person: 0 for person in self.people()}
+         for expense in self.expenses:
+             balances[expense.payer] += expense.amount_cents
+             shares = split_evenly(expense.amount_cents, len(expense.participants))
+diff --git a/tinyledger/src/tinyledger/money.py b/workspace/src/tinyledger/money.py
+index a161836..bf596d7 100644
+--- a/tinyledger/src/tinyledger/money.py
++++ b/workspace/src/tinyledger/money.py
+@@ -37,5 +37,5 @@ def split_evenly(total_cents: int, parts: int) -> list[int]:
+     """
+     if parts <= 0:
+         raise ValueError("parts must be positive")
+-    share = total_cents // parts
+-    return [share] * parts
++    share, remainder = divmod(total_cents, parts)
++    return [share + (1 if i < remainder else 0) for i in range(parts)]
